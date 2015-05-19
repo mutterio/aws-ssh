@@ -175,7 +175,7 @@ func shell(inst Instance) {
 		cmd.Args = append(cmd.Args, keyPath)
 	}
 
-	if inst.port != "22" {
+	if inst.port != "" {
 		cmd.Args = append(cmd.Args, "-p")
 		cmd.Args = append(cmd.Args, inst.port)
 	}
