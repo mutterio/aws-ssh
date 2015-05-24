@@ -1,26 +1,27 @@
 package main // import "github.com/mutterio/aws-ssh"
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"log"
-	"net/url"
 	"os"
 	"os/exec"
-	"os/user"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/awslabs/aws-sdk-go/aws"
 	"github.com/awslabs/aws-sdk-go/service/ec2"
 	"github.com/codegangsta/cli"
-	"github.com/mitchellh/go-homedir"
 )
 
 // Name is the exported name of this application.
 const Name = "aws-ssh"
 
 // Version is the current version of this application.
-const Version = "0.0.1.dev"
+const Version = "0.0.2.dev"
 
 func main() {
 	app := cli.NewApp()
@@ -30,12 +31,35 @@ func main() {
 			Usage: "find a server and shell into it.",
 			Action: func(c *cli.Context) {
 				res := getInstances()
-				instances := parseInstances(res)
+				instances := InstancesFromReservations(res, "")
 				server := ""
 				if len(c.Args()) > 0 {
 					server = c.Args()[0]
 				}
 				findServer(server, instances)
+			},
+		},
+		{
+			Name:  "config",
+			Usage: "generate aws ssh config",
+			Action: func(c *cli.Context) {
+				outDir := c.String("out")
+				keyPath := c.String("keypath")
+				res := getInstances()
+				instances := InstancesFromReservations(res, keyPath)
+				generateConfig(instances, outDir)
+			},
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "out, o",
+					Value: "",
+					Usage: "file path to be written to",
+				},
+				cli.StringFlag{
+					Name:  "keypath, kp",
+					Value: "~/.ssh",
+					Usage: "path for pem keys",
+				},
 			},
 		},
 		{
@@ -66,10 +90,10 @@ func main() {
 			Action: func(c *cli.Context) {
 				fmt.Println(strings.Join(c.Args(), " "))
 				instance := Instance{
-					host: c.String("host"),
-					key:  c.String("key"),
-					user: c.String("user"),
-					port: c.String("port"),
+					Host: c.String("host"),
+					Key:  c.String("key"),
+					User: c.String("user"),
+					Port: c.String("port"),
 				}
 				fmt.Println("HOST::: ", c.String("host"))
 				shell(instance)
@@ -83,65 +107,58 @@ func main() {
 }
 
 func findServer(server string, instances []Instance) {
-	instance := selectInstance(server, instances)
+	instance, err := selectInstance(server, instances)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	shell(instance)
 }
 
-//ec2 instance type
-type Instance struct {
-	user string
-	host string
-	key  string
-	name string
-	port string
-}
+const hostTemplate = `
+Host {{.Name}}
+HostName {{.Host}}
+User {{.User}}
+EnableSSHKeysign yes
+IdentityFile {{.KeyPath}}
+`
 
-func parseInstances(reservations []*ec2.Reservation) []Instance {
-	instances := []Instance{}
-	for _, res := range reservations {
-		for _, inst := range res.Instances {
-			name := "None"
-			user := "ubuntu"
-			key := ""
-			host := ""
-			for _, keys := range inst.Tags {
-				if *keys.Key == "Name" {
-					name = *keys.Value
-				}
-				if *keys.Key == "User" {
-					name = *keys.Value
-				}
-			}
-			if inst.KeyName != nil {
-				key = *inst.KeyName
-			}
-			if inst.PublicIPAddress != nil {
-				host = *inst.PublicIPAddress
-			}
+func generateConfig(instances []Instance, outFile string) {
+	t := template.Must(template.New("host").Parse(hostTemplate))
+	var buf bytes.Buffer
 
-			instances = append(instances, Instance{
-				name: name,
-				user: user,
-				host: host,
-				key:  key,
-			})
+	for _, inst := range instances {
+		err := t.Execute(&buf, inst)
+		if err != nil {
+			fmt.Println("template err", err)
 		}
 	}
-	return instances
+
+	if outFile != "" {
+
+		ioutil.WriteFile(outFile, buf.Bytes(), 0600)
+	} else {
+		buf.WriteTo(os.Stdout)
+	}
+
 }
-func selectInstance(server string, instances []Instance) Instance {
+
+func selectInstance(server string, instances []Instance) (Instance, error) {
 	matches := []Instance{}
 	for _, instance := range instances {
-		if strings.HasPrefix(instance.name, server) {
+		if strings.HasPrefix(instance.Name, server) {
 			matches = append(matches, instance)
 		}
 	}
 	if len(matches) == 1 {
-		return matches[0]
+		return Instance{}, errors.New("Server not found")
+	}
+	if len(matches) == 1 {
+		return matches[0], nil
 	}
 	fmt.Println("Found ", len(matches), "matches in", len(instances), "instances")
 	for pos, match := range matches {
-		fmt.Println(pos, "  ", match.name)
+		fmt.Println(pos, "  ", match.Name)
 	}
 	fmt.Print("Select vm: ")
 	var input string
@@ -151,33 +168,26 @@ func selectInstance(server string, instances []Instance) Instance {
 	if err != nil {
 		log.Fatal(err)
 	}
-	return matches[idx]
+	return matches[idx], nil
 
 }
 
 func shell(inst Instance) {
-	home, err := homedir.Dir()
-	if err != nil {
-		log.Fatal(err)
+	remoteServer := inst.Host
+	if inst.User != "" {
+		remoteServer = fmt.Sprintf("%v@%v", inst.User, remoteServer)
 	}
 
-	remoteServer := inst.host
-	if inst.user != "" {
-		remoteServer = fmt.Sprintf("%v@%v", inst.user, remoteServer)
-	}
-
-	var keyPath string
 	cmd := exec.Command("ssh")
 
-	if inst.key != "" {
-		keyPath = fmt.Sprintf("%v/.ssh/%v.pem", home, inst.key)
+	if inst.Key != "" {
 		cmd.Args = append(cmd.Args, "-i")
-		cmd.Args = append(cmd.Args, keyPath)
+		cmd.Args = append(cmd.Args, inst.KeyPath())
 	}
 
-	if inst.port != "" {
+	if inst.Port != "" {
 		cmd.Args = append(cmd.Args, "-p")
-		cmd.Args = append(cmd.Args, inst.port)
+		cmd.Args = append(cmd.Args, inst.Port)
 	}
 
 	cmd.Args = append(cmd.Args, remoteServer)
@@ -186,38 +196,17 @@ func shell(inst Instance) {
 	cmd.Stdin = os.Stdin
 	cmd.Stderr = os.Stderr
 	fmt.Println("##############################################")
-	fmt.Println("Connecting to: ", inst.name)
+	fmt.Println("Connecting to: ", inst.Name)
 	fmt.Println("Args:::", strings.Join(cmd.Args, " "))
 	fmt.Println("##############################################")
 
 	cmd.Run()
 }
 
-func getCommand(inst *ec2.Instance) (string, string) {
-	key := *inst.KeyName
-	instanceUser := "ubuntu"
-	ip := *inst.PublicIPAddress
-	for _, keys := range inst.Tags {
-		if *keys.Key == "User" {
-			instanceUser = url.QueryEscape(*keys.Value)
-		}
-	}
-	usr, err := user.Current()
-	if err != nil {
-		log.Fatal(err)
-	}
-	home := usr.HomeDir
-	keyPath := fmt.Sprintf("%v/.ssh/%v.pem", home, key)
-	remote := fmt.Sprintf("%v@%v", instanceUser, ip)
-
-	return keyPath, remote
-}
-
 func getInstances() []*ec2.Reservation {
 	fmt.Println("looking up instances.....")
 	svc := ec2.New(&aws.Config{Region: "us-east-1"})
 
-	// Call the DescribeInstances Operation
 	resp, err := svc.DescribeInstances(nil)
 	if err != nil {
 		panic(err)
