@@ -3,9 +3,8 @@ package main
 import (
 	"fmt"
 	"log"
-
-	"github.com/awslabs/aws-sdk-go/service/ec2"
 	"github.com/mitchellh/go-homedir"
+	"github.com/awslabs/aws-sdk-go/service/ec2"
 )
 
 //ec2 instance type
@@ -16,6 +15,8 @@ type Instance struct {
 	Name        string
 	Port        string
 	BaseKeyPath string
+	State       string
+	Type        string
 }
 
 func (i Instance) KeyPath() string {
@@ -43,6 +44,7 @@ func InstancesFromReservations(reservations []*ec2.Reservation, keyPath string) 
 			user := "ubuntu"
 			key := ""
 			host := ""
+			state := *inst.State.Name
 			for _, keys := range inst.Tags {
 				if *keys.Key == "Name" {
 					name = *keys.Value
@@ -64,6 +66,7 @@ func InstancesFromReservations(reservations []*ec2.Reservation, keyPath string) 
 				Host:        host,
 				Key:         key,
 				BaseKeyPath: keyPath,
+				State:       state,
 			})
 		}
 	}

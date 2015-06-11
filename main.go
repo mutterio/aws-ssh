@@ -15,13 +15,14 @@ import (
 	"github.com/awslabs/aws-sdk-go/aws"
 	"github.com/awslabs/aws-sdk-go/service/ec2"
 	"github.com/codegangsta/cli"
+	"github.com/olekukonko/tablewriter"
 )
 
 // Name is the exported name of this application.
 const Name = "aws-ssh"
 
 // Version is the current version of this application.
-const Version = "0.0.2.dev"
+const Version = "0.0.3.dev"
 
 func main() {
 	app := cli.NewApp()
@@ -157,10 +158,8 @@ func selectInstance(server string, instances []Instance) (Instance, error) {
 		return matches[0], nil
 	}
 	fmt.Println("Found ", len(matches), "matches in", len(instances), "instances")
-	for pos, match := range matches {
-		fmt.Println(pos, "  ", match.Name)
-	}
-	fmt.Print("Select vm: ")
+	writeInstances(matches)
+	fmt.Print("Select vm Num : ")
 	var input string
 	fmt.Scanln(&input)
 	fmt.Print(input)
@@ -170,6 +169,17 @@ func selectInstance(server string, instances []Instance) (Instance, error) {
 	}
 	return matches[idx], nil
 
+}
+
+func writeInstances(matches []Instance){
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Num", "Name", "State", "IP"})
+
+	for pos, match := range matches {
+		table.Append([]string{ strconv.Itoa(pos), match.Name, match.State, match.Host})
+		// fmt.Println(pos, "  ", match.Name, " ", match.State, " ", match.Host)
+	}
+	table.Render()
 }
 
 func shell(inst Instance) {
