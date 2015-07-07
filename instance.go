@@ -3,14 +3,16 @@ package main
 import (
 	"fmt"
 	"log"
-	"github.com/mitchellh/go-homedir"
+
 	"github.com/awslabs/aws-sdk-go/service/ec2"
+	"github.com/mitchellh/go-homedir"
 )
 
 //ec2 instance type
 type Instance struct {
 	User        string
 	Host        string
+	PrivateIp   string
 	Key         string
 	Name        string
 	Port        string
@@ -44,6 +46,7 @@ func InstancesFromReservations(reservations []*ec2.Reservation, keyPath string) 
 			user := "ubuntu"
 			key := ""
 			host := ""
+			privateIp := ""
 			state := *inst.State.Name
 			for _, keys := range inst.Tags {
 				if *keys.Key == "Name" {
@@ -59,6 +62,9 @@ func InstancesFromReservations(reservations []*ec2.Reservation, keyPath string) 
 			if inst.PublicIPAddress != nil {
 				host = *inst.PublicIPAddress
 			}
+			if inst.PrivateIPAddress != nil {
+				privateIp = *inst.PrivateIPAddress
+			}
 
 			instances = append(instances, Instance{
 				Name:        name,
@@ -67,6 +73,7 @@ func InstancesFromReservations(reservations []*ec2.Reservation, keyPath string) 
 				Key:         key,
 				BaseKeyPath: keyPath,
 				State:       state,
+				PrivateIp:   privateIp,
 			})
 		}
 	}

@@ -22,7 +22,7 @@ import (
 const Name = "aws-ssh"
 
 // Version is the current version of this application.
-const Version = "0.0.3.dev"
+const Version = "0.0.4"
 
 func main() {
 	app := cli.NewApp()
@@ -171,12 +171,12 @@ func selectInstance(server string, instances []Instance) (Instance, error) {
 
 }
 
-func writeInstances(matches []Instance){
+func writeInstances(matches []Instance) {
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Num", "Name", "State", "IP"})
+	table.SetHeader([]string{"Num", "Name", "State", "Public", "Private"})
 
 	for pos, match := range matches {
-		table.Append([]string{ strconv.Itoa(pos), match.Name, match.State, match.Host})
+		table.Append([]string{strconv.Itoa(pos), match.Name, match.State, match.Host, match.PrivateIp})
 		// fmt.Println(pos, "  ", match.Name, " ", match.State, " ", match.Host)
 	}
 	table.Render()
