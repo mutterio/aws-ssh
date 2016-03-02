@@ -173,10 +173,10 @@ func selectInstance(server string, instances []Instance) (Instance, error) {
 
 func writeInstances(matches []Instance) {
 	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Num", "Name", "State", "Public", "Private"})
+	table.SetHeader([]string{"Num", "Id", "State", "Public", "Private"})
 
 	for pos, match := range matches {
-		table.Append([]string{strconv.Itoa(pos), match.Name, match.State, match.Host, match.PrivateIp})
+		table.Append([]string{strconv.Itoa(pos), match.Id, match.State, match.Host, match.PrivateIp})
 		// fmt.Println(pos, "  ", match.Name, " ", match.State, " ", match.Host)
 	}
 	table.Render()

@@ -10,6 +10,7 @@ import (
 
 //ec2 instance type
 type Instance struct {
+	Id					string
 	User        string
 	Host        string
 	PrivateIp   string
@@ -67,6 +68,7 @@ func InstancesFromReservations(reservations []*ec2.Reservation, keyPath string) 
 			}
 
 			instances = append(instances, Instance{
+				Id: 				 *inst.InstanceID,
 				Name:        name,
 				User:        user,
 				Host:        host,
