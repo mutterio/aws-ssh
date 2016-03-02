@@ -22,7 +22,7 @@ import (
 const Name = "aws-ssh"
 
 // Version is the current version of this application.
-const Version = "0.0.4"
+const Version = "0.0.5"
 
 func main() {
 	app := cli.NewApp()
