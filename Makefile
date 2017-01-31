@@ -12,6 +12,7 @@ xcompile: deps
 	@rm -rf build/
 	@mkdir -p build
 	gox \
+    -arch="amd64" \
 		-os="darwin" \
 		-os="linux" \
 		-os="windows" \

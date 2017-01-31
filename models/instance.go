@@ -1,16 +1,17 @@
-package main
+package models
 
 import (
 	"fmt"
 	"log"
 
+	"github.com/awslabs/aws-sdk-go/aws"
 	"github.com/awslabs/aws-sdk-go/service/ec2"
 	"github.com/mitchellh/go-homedir"
 )
 
 //ec2 instance type
 type Instance struct {
-	Id					string
+	Id          string
 	User        string
 	Host        string
 	PrivateIp   string
@@ -68,7 +69,7 @@ func InstancesFromReservations(reservations []*ec2.Reservation, keyPath string) 
 			}
 
 			instances = append(instances, Instance{
-				Id: 				 *inst.InstanceID,
+				Id:          *inst.InstanceID,
 				Name:        name,
 				User:        user,
 				Host:        host,
@@ -80,4 +81,16 @@ func InstancesFromReservations(reservations []*ec2.Reservation, keyPath string) 
 		}
 	}
 	return instances
+}
+
+func GetInstances(region string) []*ec2.Reservation {
+	fmt.Println("looking up instances.....")
+	svc := ec2.New(&aws.Config{Region: region})
+
+	resp, err := svc.DescribeInstances(nil)
+	if err != nil {
+		panic(err)
+	}
+	return resp.Reservations
+
 }
