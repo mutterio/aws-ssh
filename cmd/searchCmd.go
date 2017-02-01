@@ -9,10 +9,8 @@ import (
 	"log"
 	"os"
 	"strconv"
-	"strings"
 
-	"github.com/mutterio/aws-ssh/models"
-	"github.com/olekukonko/tablewriter"
+	"github.com/mutterio/aws-ssh/modules"
 	"github.com/spf13/cobra"
 )
 
@@ -29,13 +27,16 @@ var searchCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(searchCmd)
+	searchCmd.PersistentFlags().StringVarP(&user, "user", "u", "user", "user to login with")
 	searchCmd.PersistentFlags().StringVarP(&region, "region", "r", "us-east-1", "aws region to use")
+	searchCmd.PersistentFlags().StringVarP(&keyPath, "keypath", "k", "~/.ssh", "path for pem keys")
 
 }
 
 func execSearch(c *cobra.Command, args []string) {
-	res := models.GetInstances(region)
-	instances := models.InstancesFromReservations(res, "")
+	fmt.Println("region>>>", region)
+	instances := modules.GetInstances(region)
+
 	server := ""
 	if len(args) > 0 {
 		server = args[0]
@@ -43,30 +44,27 @@ func execSearch(c *cobra.Command, args []string) {
 	findServer(server, instances)
 }
 
-func findServer(server string, instances []models.Instance) {
+func findServer(server string, instances modules.Instances) {
 	instance, err := selectInstance(server, instances)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	Connect(instance)
+	modules.Connect(instance, keyPath)
 }
 
-func selectInstance(server string, instances []models.Instance) (models.Instance, error) {
-	matches := []models.Instance{}
-	for _, instance := range instances {
-		if strings.HasPrefix(instance.Name, server) {
-			matches = append(matches, instance)
-		}
-	}
+func selectInstance(server string, instances modules.Instances) (modules.Instance, error) {
+	matches := instances.FilterByName(server)
 	if len(matches) == 0 {
-		return models.Instance{}, errors.New("Server not found")
+		return modules.Instance{}, errors.New("No instances Found")
 	}
 	if len(matches) == 1 {
 		return matches[0], nil
 	}
-	fmt.Println("Found ", len(matches), "matches in", len(instances), "instances")
-	writeInstances(matches)
+	if len(server) > 0 {
+		fmt.Println("Found ", len(matches), "matches in", len(instances), "instances")
+	}
+	matches.CreateTable(os.Stdout)
 	fmt.Print("Select vm Num : ")
 	var input string
 	fmt.Scanln(&input)
@@ -77,15 +75,4 @@ func selectInstance(server string, instances []models.Instance) (models.Instance
 	}
 	return matches[idx], nil
 
-}
-
-func writeInstances(matches []models.Instance) {
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Num", "Id", "State", "Public", "Private"})
-
-	for pos, match := range matches {
-		table.Append([]string{strconv.Itoa(pos), match.Id, match.State, match.Host, match.PrivateIp})
-		// fmt.Println(pos, "  ", match.Name, " ", match.State, " ", match.Host)
-	}
-	table.Render()
 }

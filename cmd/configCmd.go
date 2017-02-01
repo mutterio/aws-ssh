@@ -10,7 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/mutterio/aws-ssh/models"
+	"github.com/mutterio/aws-ssh/modules"
 	"github.com/spf13/cobra"
 )
 
@@ -32,8 +32,7 @@ func init() {
 }
 
 func execConfig(c *cobra.Command, args []string) {
-	res := models.GetInstances(region)
-	instances := models.InstancesFromReservations(res, keyPath)
+	instances := modules.GetInstances(region)
 	generateConfig(instances, outDir)
 }
 
@@ -42,14 +41,15 @@ Host {{.Name}}
 HostName {{.Host}}
 User {{.User}}
 EnableSSHKeysign yes
-IdentityFile {{.KeyPath}}
+IdentityFile {{.FullKeyPath}}
 `
 
-func generateConfig(instances []models.Instance, outFile string) {
+func generateConfig(instances []modules.Instance, outFile string) {
 	t := template.Must(template.New("host").Parse(hostTemplate))
 	var buf bytes.Buffer
 
 	for _, inst := range instances {
+		inst.FullKeyPath = inst.KeyPath(keyPath)
 		err := t.Execute(&buf, inst)
 		if err != nil {
 			fmt.Println("template err", err)
