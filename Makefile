@@ -1,7 +1,7 @@
 TEST?=./...
 NAME=aws-ssh
 # NAME = $(shell awk -F\" '/^const Name/ { print $$2 }' main.go)
-VERSION = $(shell awk -F\" '/^const Version/ { print $$2 }' cmd/version.go)
+VERSION = $(shell awk -F\" '/^const Version/ { print $$2 }' cmd/versionCmd.go)
 
 all: build
 
@@ -19,12 +19,6 @@ xcompile: deps
 		-os="linux" \
 		-os="windows" \
 		-output="build/{{.Dir}}_$(VERSION)_{{.OS}}_{{.Arch}}/$(NAME)"
-
-sxcompile: deps
-  GOOS=linux GOARCH=amd64 go install
-  GOOS=darwin GOARCH=amd64 go install
-  GOOS=windows GOARCH=amd64 go install
-  GOOS=windows GOARCH=386 go install
 
 package: xcompile
 	$(eval FILES := $(shell ls build))
