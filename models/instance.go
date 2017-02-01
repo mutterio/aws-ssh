@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"log"
 
-	"github.com/awslabs/aws-sdk-go/aws"
-	"github.com/awslabs/aws-sdk-go/service/ec2"
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/mitchellh/go-homedir"
 )
 
@@ -62,15 +63,15 @@ func InstancesFromReservations(reservations []*ec2.Reservation, keyPath string) 
 			if inst.KeyName != nil {
 				key = *inst.KeyName
 			}
-			if inst.PublicIPAddress != nil {
-				host = *inst.PublicIPAddress
+			if inst.PublicIpAddress != nil {
+				host = *inst.PublicIpAddress
 			}
-			if inst.PrivateIPAddress != nil {
-				privateIp = *inst.PrivateIPAddress
+			if inst.PrivateIpAddress != nil {
+				privateIp = *inst.PrivateIpAddress
 			}
 
 			instances = append(instances, Instance{
-				Id:          *inst.InstanceID,
+				Id:          *inst.InstanceId,
 				Name:        name,
 				User:        user,
 				Host:        host,
@@ -85,8 +86,13 @@ func InstancesFromReservations(reservations []*ec2.Reservation, keyPath string) 
 }
 
 func GetInstances(region string) []*ec2.Reservation {
+	sess, err := session.NewSession()
+	if err != nil {
+		panic(err)
+	}
 	fmt.Println("looking up instances.....")
-	svc := ec2.New(&aws.Config{Region: region})
+	cfgs := &aws.Config{Region: &region}
+	svc := ec2.New(sess, cfgs)
 
 	resp, err := svc.DescribeInstances(nil)
 	if err != nil {
