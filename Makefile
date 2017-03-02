@@ -10,7 +10,7 @@ build: deps
 	@echo ${VERSION}
 	go build -o bin/$(NAME)
 
-xcompile: deps
+xcompile: build
 	@rm -rf build/
 	@mkdir -p build
 	gox \
