@@ -24,11 +24,15 @@ func GetInstances(region string) Instances {
 	return instances
 }
 
-func mapDescriptionToUser(description string) string {
-	if strings.Contains(description, "Ubuntu") {
+func mapDescriptionToUser(description *string) string {
+	desc := ""
+	if description != nil {
+		desc = *description
+	}
+	if strings.Contains(desc, "Ubuntu") {
 		return "ubuntu"
 	}
-	if strings.Contains(description, "Centos") {
+	if strings.Contains(desc, "Centos") {
 		return "centos"
 	}
 	return "ec2-user"
@@ -50,7 +54,7 @@ func (instances Instances) fillImageDetails(region string) {
 	for _, image := range result.Images {
 		for idx, inst := range instances {
 			if inst.ImageId == *image.ImageId {
-				instances[idx].User = mapDescriptionToUser(*image.Description)
+				instances[idx].User = mapDescriptionToUser(image.Description)
 			}
 		}
 	}

@@ -7,11 +7,28 @@ import (
 	"strings"
 )
 
-func Connect(inst Instance, keyPath string) {
-	remoteServer := inst.Host
-	if inst.User != "" {
-		remoteServer = fmt.Sprintf("%v@%v", inst.User, remoteServer)
+func getHost(inst Instance) string {
+	var host string
+	if inst.Host == "" {
+		host = inst.PrivateIp
+	} else {
+		host = inst.Host
 	}
+
+	if inst.User != "" {
+		host = fmt.Sprintf("%v@%v", inst.User, host)
+	}
+
+	return host
+
+}
+
+func Connect(inst Instance, keyPath string) {
+	remoteServer := getHost(inst)
+	// remoteServer := inst.Host
+	// if inst.User != "" {
+	// 	remoteServer = fmt.Sprintf("%v@%v", inst.User, remoteServer)
+	// }
 
 	cmd := exec.Command("ssh")
 
