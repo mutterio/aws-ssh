@@ -4,10 +4,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/user"
+	"path/filepath"
 	"strings"
 )
 
-func getHost(inst Instance) string {
+func getHost(inst Instance, user string) string {
 	var host string
 	if inst.Host == "" {
 		host = inst.PrivateIp
@@ -15,7 +17,9 @@ func getHost(inst Instance) string {
 		host = inst.Host
 	}
 
-	if inst.User != "" {
+	if user != "" {
+		host = fmt.Sprintf("%v@%v", user, host)
+	} else if inst.User != "" && user != "" {
 		host = fmt.Sprintf("%v@%v", inst.User, host)
 	}
 
@@ -23,18 +27,30 @@ func getHost(inst Instance) string {
 
 }
 
-func Connect(inst Instance, keyPath string) {
-	remoteServer := getHost(inst)
-	// remoteServer := inst.Host
-	// if inst.User != "" {
-	// 	remoteServer = fmt.Sprintf("%v@%v", inst.User, remoteServer)
-	// }
+func expand(path string) (string, error) {
+	if len(path) == 0 || path[0] != '~' {
+		return path, nil
+	}
+
+	usr, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(usr.HomeDir, path[1:]), nil
+}
+
+func Connect(inst Instance, user string, keyPath string) {
+	remoteServer := getHost(inst, user)
 
 	cmd := exec.Command("ssh")
 
 	if inst.Key != "" {
 		cmd.Args = append(cmd.Args, "-i")
-		cmd.Args = append(cmd.Args, inst.KeyPath(keyPath))
+		key, err := expand(inst.KeyPath(keyPath))
+		if err != nil {
+			panic(err)
+		}
+		cmd.Args = append(cmd.Args, key)
 	}
 
 	if inst.Port != "" {

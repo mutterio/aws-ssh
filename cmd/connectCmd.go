@@ -20,7 +20,6 @@ var connectCmd = &cobra.Command{
 }
 
 var host string
-var user string
 var key string
 var port string
 
@@ -43,5 +42,5 @@ func execConnect(c *cobra.Command, args []string) {
 	}
 	fmt.Println("HOST::: ", host)
 
-	modules.Connect(instance, keyDir)
+	modules.Connect(instance, user, keyDir)
 }

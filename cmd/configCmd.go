@@ -22,13 +22,10 @@ var configCmd = &cobra.Command{
 }
 
 var outDir string
-var keyPath string
 
 func init() {
 	RootCmd.AddCommand(configCmd)
 	configCmd.PersistentFlags().StringVarP(&outDir, "out", "o", "", "file path to be written to")
-	configCmd.PersistentFlags().StringVarP(&keyPath, "keypath", "k", "~/.ssh", "path for pem keys")
-	configCmd.PersistentFlags().StringVarP(&region, "region", "r", "us-east-1", "aws region to use")
 }
 
 func execConfig(c *cobra.Command, args []string) {

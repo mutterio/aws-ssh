@@ -7,11 +7,15 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
 
 var cfgFile string
+var region string
+var user string
+var keyPath string
 
 // RootCmd represents the base command when called without any subcommands
 var RootCmd = &cobra.Command{
@@ -34,7 +38,10 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(initConfig)
-
+	path, err := homedir.Expand("~/.ssh")
+	if err == nil {
+		keyPath = path
+	}
 	// Here you will define your flags and configuration settings.
 	// Cobra supports Persistent Flags, which, if defined here,
 	// will be global for your application.
@@ -42,7 +49,10 @@ func init() {
 	RootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.aws-ssh.yaml)")
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	RootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	RootCmd.PersistentFlags().StringVarP(&user, "user", "u", "ubuntu", "user to login with")
+	RootCmd.PersistentFlags().StringVarP(&region, "region", "r", "us-east-1", "aws region to use")
+	RootCmd.PersistentFlags().StringVarP(&keyPath, "keypath", "k", "~/.ssh", "path for pem keys")
+	viper.BindPFlag("user", RootCmd.PersistentFlags().Lookup("user"))
 }
 
 // initConfig reads in config file and ENV variables if set.

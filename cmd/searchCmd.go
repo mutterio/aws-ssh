@@ -14,8 +14,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var region string
-
 // searchCmd represents the search command
 var searchCmd = &cobra.Command{
 	Use:   "search",
@@ -27,10 +25,6 @@ var searchCmd = &cobra.Command{
 
 func init() {
 	RootCmd.AddCommand(searchCmd)
-	searchCmd.PersistentFlags().StringVarP(&user, "user", "u", "user", "user to login with")
-	searchCmd.PersistentFlags().StringVarP(&region, "region", "r", "us-east-1", "aws region to use")
-	searchCmd.PersistentFlags().StringVarP(&keyPath, "keypath", "k", "~/.ssh", "path for pem keys")
-
 }
 
 func execSearch(c *cobra.Command, args []string) {
@@ -50,7 +44,7 @@ func findServer(server string, instances modules.Instances) {
 		fmt.Println(err)
 		return
 	}
-	modules.Connect(instance, keyPath)
+	modules.Connect(instance, user, keyPath)
 }
 
 func selectInstance(server string, instances modules.Instances) (modules.Instance, error) {
