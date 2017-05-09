@@ -106,10 +106,17 @@ func (instances Instances) FilterByName(name string) Instances {
 //CreateTable creates a formated table of instances
 func (instances Instances) CreateTable(writer io.Writer) {
 	table := tablewriter.NewWriter(writer)
-	table.SetHeader([]string{"Num", "Id", "State", "Public", "Private"})
+	table.SetHeader([]string{"Num", "Id", "State", "Public", "Private", "env", "role"})
 
 	for pos, inst := range instances {
-		table.Append([]string{strconv.Itoa(pos), inst.Id, inst.State, inst.Host, inst.PrivateIp})
+		table.Append([]string{strconv.Itoa(pos),
+			inst.Id,
+			inst.State,
+			inst.Host,
+			inst.PrivateIp,
+			inst.GetKey("env"),
+			inst.GetKey("role"),
+		})
 		// fmt.Println(pos, "  ", inst.Name, " ", inst.State, " ", inst.Host)
 	}
 	table.Render()
