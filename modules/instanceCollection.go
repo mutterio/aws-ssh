@@ -10,6 +10,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/olekukonko/tablewriter"
+	"github.com/spf13/viper"
 )
 
 //Instances Instance Collection type
@@ -106,17 +107,24 @@ func (instances Instances) FilterByName(name string) Instances {
 //CreateTable creates a formated table of instances
 func (instances Instances) CreateTable(writer io.Writer) {
 	table := tablewriter.NewWriter(writer)
-	table.SetHeader([]string{"Num", "Id", "State", "Public", "Private", "env", "role"})
+	tags := viper.GetStringSlice("tags")
+	fmt.Println(tags)
+	headers := []string{"Num", "Id", "State", "Public", "Private"}
+	headers = append(headers, tags...)
+	table.SetHeader(headers)
 
 	for pos, inst := range instances {
-		table.Append([]string{strconv.Itoa(pos),
+		row := []string{strconv.Itoa(pos),
 			inst.Id,
 			inst.State,
 			inst.Host,
 			inst.PrivateIp,
-			inst.GetKey("env"),
-			inst.GetKey("role"),
-		})
+		}
+		for _, tag := range tags {
+			row = append(row, inst.GetKey(tag))
+		}
+		// row = append(row, tags...)
+		table.Append(row)
 		// fmt.Println(pos, "  ", inst.Name, " ", inst.State, " ", inst.Host)
 	}
 	table.Render()
